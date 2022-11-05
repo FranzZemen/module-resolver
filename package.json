@@ -1,0 +1,42 @@
+{
+  "name": "@franzzemen/module-resolver",
+  "version": "1.0.0",
+  "description": "Keeps track of promises for later resolution, allowing promises to remain synchronous if the results are not immediately needed.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FranzZemen/module-resolver.git"
+  },
+  "keywords": [
+    "Resolver"
+  ],
+  "author": "Franz Zemen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FranzZemen/module-resolver/issues"
+  },
+  "homepage": "https://github.com/FranzZemen/module-resolver#readme",
+  "devDependencies": {
+    "@franzzemen/gulp-base": "^12.1.1",
+    "@franzzemen/npmu": "^2.0.18",
+    "@franzzemen/test": "^1.0.4",
+    "@types/chai": "^4.3.3",
+    "@types/lodash": "^4.14.188",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^18.11.9",
+    "chai": "^4.3.6",
+    "fastest-validator": "^1.15.0",
+    "gulp": "^4.0.2",
+    "gulp-mocha": "^8.0.0",
+    "mocha": "^10.1.0",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "@franzzemen/enhanced-error": "^1.1.3",
+    "@franzzemen/module-factory": "^1.0.5"
+  }
+}
