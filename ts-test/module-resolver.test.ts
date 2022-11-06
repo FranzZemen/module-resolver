@@ -1,4 +1,4 @@
-import {CheckFunction} from '@franzzemen/enhanced-error';
+import {CheckFunction} from '@franzzemen/execution-context';
 import {ModuleResolution} from '@franzzemen/module-factory';
 import chai from 'chai';
 import Validator, {ValidationError, ValidationSchema} from 'fastest-validator';
