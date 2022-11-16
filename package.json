@@ -1,9 +1,17 @@
 {
   "name": "@franzzemen/module-resolver",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Keeps track of promises for later resolution, allowing promises to remain synchronous if the results are not immediately needed.",
   "type": "module",
-  "main": "index.js",
+  "main": "./publish/dist/cjs/index.js",
+  "module": "publish/dist/mjs/index.js",
+  "types": "publish/dist/mjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./publish/dist/mjs/index.js",
+      "require": "./publish/dist/cjs/index.js"
+    }
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -21,22 +29,24 @@
   },
   "homepage": "https://github.com/FranzZemen/module-resolver#readme",
   "devDependencies": {
-    "@franzzemen/gulp-base": "^12.1.1",
-    "@franzzemen/npmu": "^2.0.18",
+    "@franzzemen/gulp-base": "^17.0.11",
+    "@franzzemen/npmu": "^4.0.4",
     "@franzzemen/test": "^1.0.4",
-    "@types/chai": "^4.3.3",
-    "@types/lodash": "^4.14.188",
+    "@types/chai": "^4.3.4",
+    "@types/lodash": "^4.14.189",
     "@types/mocha": "^10.0.0",
     "@types/node": "^18.11.9",
-    "chai": "^4.3.6",
-    "fastest-validator": "^1.15.0",
+    "chai": "^4.3.7",
     "gulp": "^4.0.2",
     "gulp-mocha": "^8.0.0",
     "mocha": "^10.1.0",
-    "typescript": "^4.8.4"
+    "typescript": "^4.9.3"
   },
   "dependencies": {
-    "@franzzemen/enhanced-error": "^1.2.0",
-    "@franzzemen/module-factory": "^1.0.5"
+    "@franzzemen/enhanced-error": "^2.0.3",
+    "@franzzemen/execution-context": "^4.0.8",
+    "@franzzemen/logger-adapter": "^5.0.4",
+    "@franzzemen/module-factory": "^5.0.1",
+    "fastest-validator": "^1.15.0"
   }
 }

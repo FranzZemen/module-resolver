@@ -1,17 +1,19 @@
 import {CheckFunction} from '@franzzemen/execution-context';
-import {ModuleResolution} from '@franzzemen/module-factory';
+import type {ModuleResolver as Resolver} from '../publish';
+import {
+  LoadPackageType,
+  ModuleResolutionActionInvocation,
+  ModuleResolutionSetterInvocation,
+  ModuleResolver,
+  PendingModuleResolution
+  // @ts-ignore
+} from '@franzzemen/module-resolver';
 import chai from 'chai';
 import Validator, {ValidationError, ValidationSchema} from 'fastest-validator';
 import 'mocha';
 import {isPromise} from 'util/types';
-import {
-  LoadPackageType,
-  ModuleResolutionActionInvocation, ModuleResolutionResult, ModuleResolutionSetterInvocation,
-  ModuleResolver,
-  PendingModuleResolution
-} from '../publish/index.js';
+import type {ModuleResolutionResult} from '../publish';
 import {MyObject} from './my-object.js';
-
 
 
 const should = chai.should();
@@ -27,10 +29,10 @@ describe('@franzzemen/module-resolver', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -38,43 +40,37 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json
+                moduleName: './testing-mjs/test-json.json'
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          resolver.pendingAsync.should.be.false;
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                unreachableCode.should.be.true;
-              });
-          } else {
-            refName.should.equal('myJSONObj');
-            (typeof testJsonObj).should.equal('object');
-            testJsonObj.name.should.exist;
-            testJsonObj.id.should.equal(1);
-            testJsonObj.name.should.equal('Franz');
-            testJsonObj.id.should.exist;
-          }
+          const resultPromise = resolver.resolve();
+
+          return resultPromise
+            .then(values => {
+              refName.should.equal('myJSONObj');
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+            });
         });
         it('should load json with passing schema check', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -82,13 +78,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON, 
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json,
+                moduleName: './testing-mjs/test-json.json',
                 loadSchema: {
                   validationSchema: {
                     name: {type: 'string'},
@@ -100,32 +94,30 @@ describe('@franzzemen/module-resolver', () => {
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            unreachableCode.should.be.true;
-          } else {
-            expect(resultOrPromise[0].loadingResult.error).to.be.undefined;
-            resultOrPromise[0].loadingResult.resolved.should.be.true;
-            resultOrPromise[0].setterResult.resolved.should.be.true;
-            (typeof testJsonObj).should.equal('object');
-            testJsonObj.name.should.exist;
-            testJsonObj.id.should.equal(1);
-            testJsonObj.name.should.equal('Franz');
-            testJsonObj.id.should.exist;
-          }
-
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              expect(result[0].loadingResult.error).to.be.undefined;
+              result[0].loadingResult.resolved.should.be.true;
+              result[0].setterResult.resolved.should.be.true;
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+            });
         });
 
         it('should load json with failing schema check', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -133,13 +125,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json,
+                moduleName: './testing-mjs/test-json.json',
                 loadSchema: {
                   validationSchema: {
                     name: {type: 'string'},
@@ -152,26 +142,25 @@ describe('@franzzemen/module-resolver', () => {
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            unreachableCode.should.be.true;
-          } else {
-            resultOrPromise.length.should.equal(1);
-            const result = resultOrPromise[0];
-            expect(result.loadingResult.error).to.exist;
-            result.loadingResult.resolved.should.be.false;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              result.length.should.equal(1);
+              const result1 = result[0];
+              expect(result1.loadingResult.error).to.exist;
+              result1.loadingResult.resolved.should.be.false;
+            });
         });
         it('should load json with async schema check', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -179,13 +168,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json,
+                moduleName: './testing-mjs/test-json.json',
                 loadSchema: {
                   validationSchema: {
                     $$async: true,
@@ -207,33 +194,29 @@ describe('@franzzemen/module-resolver', () => {
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                expect(values[0].loadingResult.error).to.be.undefined;
-                values[0].setterResult.resolved.should.be.true;
-                values[0].loadingResult.resolved.should.be.true;
-                (typeof testJsonObj).should.equal('object');
-                testJsonObj.name.should.exist;
-                testJsonObj.id.should.equal(1);
-                testJsonObj.name.should.equal('Franz');
-                testJsonObj.id.should.exist;
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              expect(result[0].loadingResult.error).to.be.undefined;
+              result[0].loadingResult.resolved.should.be.true;
+              result[0].setterResult.resolved.should.be.true;
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+            });
         });
         it('should load json with async schema fail', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -241,13 +224,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json,
+                moduleName: './testing-mjs/test-json.json',
                 loadSchema: {
                   validationSchema: {
                     $$async: true,
@@ -275,33 +256,27 @@ describe('@franzzemen/module-resolver', () => {
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                values.length.should.equal(1);
-                const result = values[0];
-                expect(result.loadingResult.error).to.exist;
-                result.loadingResult.resolved.should.be.false;
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
-
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              result.length.should.equal(1);
+              const result1 = result[0];
+              expect(result1.loadingResult.error).to.exist;
+              result1.loadingResult.resolved.should.be.false;
+            });
         });
 
         it('should load json with compiled async check', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
-
 
           const schema: ValidationSchema = {
             $$async: true,
@@ -324,35 +299,30 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json,
+                moduleName: './testing-mjs/test-json.json',
                 loadSchema
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            resultOrPromise.then(values => {
-              expect(values[0].loadingResult.error).to.be.undefined;
-              values[0].setterResult.resolved.should.be.true;
-              values[0].loadingResult.resolved.should.be.true;
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              expect(result[0].loadingResult.error).to.be.undefined;
+              result[0].loadingResult.resolved.should.be.true;
+              result[0].setterResult.resolved.should.be.true;
               (typeof testJsonObj).should.equal('object');
               testJsonObj.name.should.exist;
               testJsonObj.id.should.equal(1);
               testJsonObj.name.should.equal('Franz');
               testJsonObj.id.should.exist;
             });
-          } else {
-            unreachableCode.should.be.true;
-          }
         });
       });
       describe('loadPackageType=json and moduleResolution=es', () => {
@@ -373,36 +343,30 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: true,
               objectRef: a,
-              _function: 'setJSON',
-              isAsync: false
+              _function: 'setJSON'
             },
             loader: {
               module: {
                 moduleName: '@franzzemen/test',
-                propertyName: 'nestedJsonStr.jsonStr',
-                moduleResolution: ModuleResolution.es
+                propertyName: 'nestedJsonStr.jsonStr'
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                values.length.should.equal(1);
-                a.refName.should.equal('myA');
-                values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
-                ('prop' in a.jsonObj).should.be.true;
-                a.jsonObj.prop.should.equal('jsonStr');
-              }, err => {
-                console.log(err);
-                unreachableCode.should.be.false;
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then((values: ModuleResolutionResult[]) => {
+              values.length.should.equal(1);
+              a.refName.should.equal('myA');
+              values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
+              ('prop' in a.jsonObj).should.be.true;
+              a.jsonObj.prop.should.equal('jsonStr');
+            }, err => {
+              console.log(err);
+              unreachableCode.should.be.false;
+            });
         });
         it('should resolve loading JSON from a package and setting an object with extra params [5,"abc"]', () => {
           class A {
@@ -424,44 +388,38 @@ describe('@franzzemen/module-resolver', () => {
               ownerIsObject: true,
               objectRef: a,
               _function: 'setJSON',
-              paramsArray: [5, 'abc'],
-              isAsync: false
+              paramsArray: [5, 'abc']
             },
             loader: {
               module: {
                 moduleName: '@franzzemen/test',
-                propertyName: 'nestedJsonStr.jsonStr',
-                moduleResolution: ModuleResolution.es
+                propertyName: 'nestedJsonStr.jsonStr'
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                values.length.should.equal(1);
-                values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
-                ('prop' in a.jsonObj).should.be.true;
-                a.jsonObj.prop.should.equal('jsonStr');
-                a.num.should.equal(5);
-                a.str.should.equal('abc');
-              }, err => {
-                console.log(err);
-                unreachableCode.should.be.false;
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then((values: ModuleResolutionResult[]) => {
+              values.length.should.equal(1);
+              values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
+              ('prop' in a.jsonObj).should.be.true;
+              a.jsonObj.prop.should.equal('jsonStr');
+              a.num.should.equal(5);
+              a.str.should.equal('abc');
+            }, err => {
+              console.log(err);
+              unreachableCode.should.be.false;
+            });
         });
         it('should resolve loading JSON from a package and setting a function', () => {
           let jsonObj;
 
-          function setJSON(refName, _jsonObj): true {
+          function setJSON(refName, _jsonObj): Promise<true> {
             jsonObj = _jsonObj;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -469,46 +427,39 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
                 moduleName: '@franzzemen/test',
-                propertyName: 'nestedJsonStr.jsonStr',
-                moduleResolution: ModuleResolution.es
+                propertyName: 'nestedJsonStr.jsonStr'
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                values.length.should.equal(1);
-                values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
-                jsonObj.prop.should.equal('jsonStr');
-              }, err => {
-                console.log(err);
-                unreachableCode.should.be.false;
-              });
-          } else {
-            unreachableCode.should.be.true;
-
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then((values: ModuleResolutionResult[]) => {
+              values.length.should.equal(1);
+              values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
+              jsonObj.prop.should.equal('jsonStr');
+            }, err => {
+              console.log(err);
+              unreachableCode.should.be.false;
+            });
         });
         it('should resolve loading JSON from a package and setting a function with extra params [5,"abc"]', () => {
           let jsonObj;
           let num: number;
           let str: string;
 
-          function setJSON(refName, _jsonObj, result, aNum, aStr): true {
+          function setJSON(refName, _jsonObj, result, aNum, aStr): Promise<true> {
             jsonObj = _jsonObj;
             num = aNum;
             str = aStr;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -517,47 +468,41 @@ describe('@franzzemen/module-resolver', () => {
               ownerIsObject: false,
               objectRef: undefined,
               _function: setJSON,
-              paramsArray: [5, 'abc'],
-              isAsync: false
+              paramsArray: [5, 'abc']
             },
             loader: {
               module: {
                 moduleName: '@franzzemen/test',
-                propertyName: 'nestedJsonStr.jsonStr',
-                moduleResolution: ModuleResolution.es
+                propertyName: 'nestedJsonStr.jsonStr'
               },
               loadPackageType: LoadPackageType.json
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                values.length.should.equal(1);
-                values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
-                jsonObj.prop.should.equal('jsonStr');
-                num.should.equal(5);
-                str.should.equal('abc');
-                resolver.clear();
-                resolver.pendingResolutions.length.should.equal(0);
-                resolver.moduleResolutionResults.length.should.equal(0);
-              }, err => {
-                console.log(err);
-                unreachableCode.should.be.false;
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then((values: ModuleResolutionResult[]) => {
+              values.length.should.equal(1);
+              values[0].loadingResult.resolvedObject['prop'].should.equal('jsonStr');
+              jsonObj.prop.should.equal('jsonStr');
+              num.should.equal(5);
+              str.should.equal('abc');
+              resolver.clear();
+              resolver.pendingResolutions.length.should.equal(0);
+              resolver.moduleResolutionResults.length.should.equal(0);
+            }, err => {
+              console.log(err);
+              unreachableCode.should.be.false;
+            });
         });
         describe('loadPackageType=object', () => {
           it('should load a via module function from es extended with successful schema check on moduleDef', () => {
             let obj;
 
-            function setObj(refName, _obj): true {
+            function setObj(refName, _obj): Promise<true> {
               obj = _obj;
-              return true;
+              return Promise.resolve(true);
             }
 
             const pendingResolution: PendingModuleResolution = {
@@ -565,15 +510,13 @@ describe('@franzzemen/module-resolver', () => {
               setter: {
                 ownerIsObject: false,
                 objectRef: undefined,
-                _function: setObj,
-                isAsync: false
+                _function: setObj
               }
               ,
               loader: {
                 module: {
-                  moduleName: '../../../testing/extended.js',
+                  moduleName: './testing-mjs/extended.js',
                   functionName: 'create2',
-                  moduleResolution: ModuleResolution.es,
                   loadSchema: {
                     validationSchema: {
                       name: {type: 'string'}
@@ -584,80 +527,71 @@ describe('@franzzemen/module-resolver', () => {
                 loadPackageType: LoadPackageType.package
               }
             };
-            const resolver = new ModuleResolver();
+            const resolver: Resolver = new ModuleResolver();
             resolver.add(pendingResolution);
-            const resultOrPromise = resolver.resolve();
-            if (isPromise(resultOrPromise)) {
-              return resultOrPromise
-                .then(values => {
-                  values.length.should.equal(1);
-                  const result = values[0];
-                  expect(result.loadingResult.resolvedObject['name']).to.equal('Test');
-                }, err => {
-                  console.log(err);
-                  unreachableCode.should.be.true;
-                });
-            } else {
-              unreachableCode.should.be.true;
-            }
-          });
-          it('should load promise via module default from commonjs bad-extended, for function name createAsyncFunc', () => {
-            let obj;
-
-            function setObj(refName, _obj): true {
-              obj = _obj;
-              return true;
-            }
-
-            const pendingResolution: PendingModuleResolution = {
-              refName: 'myA',
-              setter: {
-                ownerIsObject: false,
-                objectRef: undefined,
-                _function: setObj,
-                isAsync: false
-              },
-              loader: {
-                module: {
-                  moduleName: '../../../testing/bad-extended.cjs',
-                  moduleResolution: ModuleResolution.commonjs,
-                  functionName: 'createAsyncFunc',
-                  asyncFactory: true
-                },
-                loadPackageType: LoadPackageType.package
-              }
-            };
-            const resolver = new ModuleResolver();
-            resolver.add(pendingResolution);
-            resolver.pendingAsync.should.be.true;
-            const resultOrPromise = resolver.resolve();
-            if (isPromise(resultOrPromise)) {
-              resultOrPromise.then(values => {
+            const resultPromise = resolver.resolve();
+            return resultPromise
+              .then((values: ModuleResolutionResult[]) => {
                 values.length.should.equal(1);
                 const result = values[0];
-                expect(result.loadingResult.resolvedObject).to.equal(50);
+                expect(result.loadingResult.resolvedObject['name']).to.equal('Test');
+              }, err => {
+                console.log(err);
+                unreachableCode.should.be.true;
               });
-            } else {
-              unreachableCode.should.be.true;
-
-            }
           });
+          /*
+                    it('should load promise via module default from commonjs bad-extended, for function name createAsyncFunc', () => {
+                      let obj;
+
+                      function setObj(refName, _obj): Promise<true> {
+                        obj = _obj;
+                        return Promise.resolve(true);
+                      }
+
+                      const pendingResolution: PendingModuleResolution = {
+                        refName: 'myA',
+                        setter: {
+                          ownerIsObject: false,
+                          objectRef: undefined,
+                          _function: setObj
+                        },
+                        loader: {
+                          module: {
+                            moduleName: './testing-mjs/bad-extended.cjs',
+                            functionName: 'createAsyncFunc',
+                            asyncFactory: true
+                          },
+                          loadPackageType: LoadPackageType.package
+                        }
+                      };
+                      const resolver: Resolver = new ModuleResolver();
+                      resolver.add(pendingResolution);
+                      const resultPromise = resolver.resolve();
+                      return resultPromise.then((values: ModuleResolutionResult[]) => {
+                        values.length.should.equal(1);
+                        const result = values[0];
+                        expect(result.loadingResult.resolvedObject).to.equal(50);
+                      });
+                    });
+
+           */
         });
         it('should invoke action', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           let actionCount = 0;
 
-          function action(allSuccess: boolean, ec): true {
+          function action(allSuccess: boolean, ec): Promise<true> {
             actionCount++;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -665,13 +599,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json
+                moduleName: './testing-mjs/test-json.json'
               },
               loadPackageType: LoadPackageType.json
             },
@@ -679,43 +611,38 @@ describe('@franzzemen/module-resolver', () => {
               dedupId: 'actionTest',
               _function: action,
               objectRef: undefined,
-              ownerIsObject: false,
-              isAsync: false
+              ownerIsObject: false
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                unreachableCode.should.be.true;
-              });
-          } else {
-            refName.should.equal('myJSONObj');
-            (typeof testJsonObj).should.equal('object');
-            testJsonObj.name.should.exist;
-            testJsonObj.id.should.equal(1);
-            testJsonObj.name.should.equal('Franz');
-            testJsonObj.id.should.exist;
-            actionCount.should.equal(1);
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              refName.should.equal('myJSONObj');
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+              actionCount.should.equal(1);
+            });
         });
         it('should invoke action only once', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           let actionCount = 0;
 
-          function action(allSuccess: boolean, ec): true {
+          function action(allSuccess: boolean, ec): Promise<true> {
             actionCount++;
-            return true;
+            return Promise.resolve(true);
           }
 
           const pendingResolution: PendingModuleResolution = {
@@ -723,13 +650,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json
+                moduleName: './testing-mjs/test-json.json'
               },
               loadPackageType: LoadPackageType.json
             },
@@ -737,44 +662,40 @@ describe('@franzzemen/module-resolver', () => {
               dedupId: 'actionTest',
               _function: action,
               objectRef: undefined,
-              ownerIsObject: false,
-              isAsync: false
+              ownerIsObject: false
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
           resolver.add(pendingResolution);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                unreachableCode.should.be.true;
-              });
-          } else {
-            refName.should.equal('myJSONObj');
-            (typeof testJsonObj).should.equal('object');
-            testJsonObj.name.should.exist;
-            testJsonObj.id.should.equal(1);
-            testJsonObj.name.should.equal('Franz');
-            testJsonObj.id.should.exist;
-            actionCount.should.equal(1);
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              refName.should.equal('myJSONObj');
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+              actionCount.should.equal(1);
+            });
+
         });
         it('should invoke action only once with independent action', () => {
           let testJsonObj;
           let refName: string;
 
-          function setJSON(_refName: string, _jsonObj): true {
+          function setJSON(_refName: string, _jsonObj): Promise<true> {
             testJsonObj = _jsonObj;
             refName = _refName;
-            return true;
+            return Promise.resolve(true);
           }
 
           let actionCount = 0;
 
-          function action(allSuccess: boolean, ec): true {
+          function action(allSuccess: boolean, ec): Promise<true> {
             actionCount++;
-            return true;
+            return Promise.resolve(true);
           }
 
 
@@ -783,13 +704,11 @@ describe('@franzzemen/module-resolver', () => {
             setter: {
               ownerIsObject: false,
               objectRef: undefined,
-              _function: setJSON,
-              isAsync: false
+              _function: setJSON
             },
             loader: {
               module: {
-                moduleName: '../../../testing/test-json.json',
-                moduleResolution: ModuleResolution.json
+                moduleName: './testing-mjs/test-json.json'
               },
               loadPackageType: LoadPackageType.json
             },
@@ -797,8 +716,7 @@ describe('@franzzemen/module-resolver', () => {
               dedupId: 'actionTest',
               _function: action,
               objectRef: undefined,
-              ownerIsObject: false,
-              isAsync: false
+              ownerIsObject: false
             }
           };
           const pendingResolution2: PendingModuleResolution = {
@@ -807,29 +725,24 @@ describe('@franzzemen/module-resolver', () => {
               dedupId: 'actionTest',
               _function: action,
               objectRef: undefined,
-              ownerIsObject: false,
-              isAsync: false
+              ownerIsObject: false
             }
           };
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
           resolver.add(pendingResolution);
           resolver.add(pendingResolution2);
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(values => {
-                unreachableCode.should.be.true;
-              });
-          } else {
-            refName.should.equal('myJSONObj');
-            (typeof testJsonObj).should.equal('object');
-            testJsonObj.name.should.exist;
-            testJsonObj.id.should.equal(1);
-            testJsonObj.name.should.equal('Franz');
-            testJsonObj.id.should.exist;
-            actionCount.should.equal(1);
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(values => {
+              refName.should.equal('myJSONObj');
+              (typeof testJsonObj).should.equal('object');
+              testJsonObj.name.should.exist;
+              testJsonObj.id.should.equal(1);
+              testJsonObj.name.should.equal('Franz');
+              testJsonObj.id.should.exist;
+              actionCount.should.equal(1);
+            });
         });
         it('should invoke action only once with independent action and async', () => {
 
@@ -862,40 +775,32 @@ describe('@franzzemen/module-resolver', () => {
             refName: 'FunObject',
             loader: {
               module: {
-                moduleName: '../../../testing/my-object.js',
-                functionName: 'myObjectFactory',
-                moduleResolution: ModuleResolution.es
+                moduleName: './testing-mjs/my-object.js',
+                functionName: 'myObjectFactory'
               },
               loadPackageType: LoadPackageType.package
             },
             setter: {
               ownerIsObject: false,
               _function: setter,
-              paramsArray: ['FunObject'],
-              isAsync: true
+              paramsArray: ['FunObject']
             },
             action: {
               _function: action,
               objectRef: undefined,
               ownerIsObject: false,
-              paramsArray: [someObject, 5],
-              isAsync: true
+              paramsArray: [someObject, 5]
             }
           };
 
-          const resolver = new ModuleResolver();
+          const resolver: Resolver = new ModuleResolver();
           resolver.add(pendingResolution);
-          resolver.pendingAsync.should.be.true;
-          const resultOrPromise = resolver.resolve();
-          if (isPromise(resultOrPromise)) {
-            return resultOrPromise
-              .then(result => {
-                someObject.myObject.name.should.equal('FunObject');
-                someObject.count.should.equal(5);
-              });
-          } else {
-            unreachableCode.should.be.true;
-          }
+          const resultPromise = resolver.resolve();
+          return resultPromise
+            .then(result => {
+              someObject.myObject.name.should.equal('FunObject');
+              someObject.count.should.equal(5);
+            });
         });
       });
     });

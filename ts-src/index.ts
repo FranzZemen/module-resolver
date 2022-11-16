@@ -3,17 +3,8 @@ Created by Franz Zemen 11/05/2022
 License Type: MIT
 */
 import {EnhancedError, logErrorAndReturn, logErrorAndThrow} from '@franzzemen/enhanced-error';
-import {LoggerAdapter, LogExecutionContext} from '@franzzemen/logger-adapter';
-import {isAsyncCheckFunction} from '@franzzemen/execution-context';
-import {
-  isLoadSchema,
-  loadFromModule,
-  loadJSONFromPackage,
-  loadJSONResource,
-  ModuleDefinition,
-  ModuleResolution
-} from '@franzzemen/module-factory';
-import {isPromise} from 'util/types';
+import {LogExecutionContext, LoggerAdapter} from '@franzzemen/logger-adapter';
+import {loadFromModule, loadJSONFromModule, loadJSONResource, ModuleDefinition} from '@franzzemen/module-factory';
 
 
 export enum LoadPackageType {
@@ -21,17 +12,17 @@ export enum LoadPackageType {
   package = 'object'
 }
 
-// If error an Error is expected to be throw or a Promise that resolves to one
-export type ModuleResolutionSetterInvocation = ((refName: string, result: any, def?: ModuleResolutionResult, ...params) => true | Promise<true>);
+// If an error is encountered, it is expected that Promise.reject will be returned.
+export type ModuleResolutionSetterInvocation = ((refName: string, result: any, def?: ModuleResolutionResult, ...params) => Promise<true>);
 /**
  * Invoked once the resolver has resolved ALL module loads and setters
  * Only called if the any associated module load and any setter was successful for all identical dedup ids.
  * Be careful, "successfulResolution" indicates overall module resolver successful for all resolutions.  This action
  * is not invoked if "this" resolution loading or setting failed or any actions that have the same dedup id.
  *
- * If error an Error is expected or a Promise that resolves to one
+ * If error an Error is expected or a Promise that resolves to one (Promise.reject)
  */
-export type ModuleResolutionActionInvocation = (successfulResolution: boolean, ...params) => true | Promise<true>;
+export type ModuleResolutionActionInvocation = (successfulResolution: boolean, ...params) => Promise<true>;
 
 
 export interface ModuleResolutionInvocationSpecification<I> {
@@ -43,15 +34,10 @@ export interface ModuleResolutionInvocationSpecification<I> {
   // object, this will be the function itself (be careful when defining inline that your closures are what you want).
   _function: string | I,
   // Any parameters the function requires
-  paramsArray?: any[],
-  // Until this package has actually invoked the function, setting this is only a suggestion for the external user
-  // Note that it actually doesn't influence processing, it just informs the setter function (as a suggestion prior and
-  // as fact just after) is async.  Only applies when ownerIsObject is false.  The factual setting of this is done
-  // internally automatically.
-  isAsync?: boolean
+  paramsArray?: any[]
 }
 
-export interface ModuleResolutionAction extends ModuleResolutionInvocationSpecification<ModuleResolutionActionInvocation>{
+export interface ModuleResolutionAction extends ModuleResolutionInvocationSpecification<ModuleResolutionActionInvocation> {
   /**
    * This is an id that if set will ensure all actions with this id execute only once.
    *
@@ -124,26 +110,19 @@ export class ModuleResolver {
   pendingResolutions: PendingModuleResolution[] = [];
   moduleResolutionResults: ModuleResolutionResult[] = [];
   isResolving = false;
-  // Simply a flag that remembers if resolutions contain async behavior.
-  // Processing will not assume it does or doesn't, this is helpful to the outside world
-  protected _pendingAsync = false;
 
-  get pendingAsync(): boolean {
-    return this._pendingAsync;
-  }
+  // Simply a flag that remembers if resolutions contain async behavior.
 
   constructor() {
   }
-
-
 
   static resolutionsHaveErrors(results: ModuleResolutionResult[]): boolean {
     return results.some(result => result.loadingResult?.error || result.setterResult?.error || result.actionResult?.error);
   }
 
-  private static invokeSetter(result: ModuleResolutionResult, ec?: LogExecutionContext): true | Promise<true> {
-    const log = new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'invokeSetter');
-    let setterResult: true | Promise<true>;
+  private static invokeSetter(result: ModuleResolutionResult, ec?: LogExecutionContext): Promise<true> {
+    const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invokeSetter');
+    let setterResult: Promise<true>;
     if (result.resolution?.setter) {
       try {
         let paramsArray: any[];
@@ -153,16 +132,6 @@ export class ModuleResolver {
           paramsArray = [result.resolution.refName, result.loadingResult.resolvedObject, result];
         }
         setterResult = this.invoke<true>(result.resolution.setter, paramsArray, ec);
-      } catch (err) {
-        log.warn(result, `Setter could not be successfully invoked`);
-        logErrorAndReturn(err, log);
-        result.setterResult = {
-          resolved: false,
-          error: err
-        };
-        return true;
-      }
-      if (isPromise(setterResult)) {
         return setterResult
           .then(trueVal => {
             result.setterResult = {
@@ -178,38 +147,44 @@ export class ModuleResolver {
             };
             return true;
           });
-      } else {
+      } catch (err) {
+        log.warn(result, `Setter could not be successfully invoked`);
+        const enhancedError = logErrorAndReturn(err, log);
         result.setterResult = {
-          resolved: true
+          resolved: false,
+          error: enhancedError
         };
-        return setterResult;
+        Promise.reject(enhancedError);
       }
     } else {
-      return true;
+      Promise.resolve(true);
     }
   }
 
-  private static invoke<R>(spec: ModuleResolutionInvocationSpecification<any>, enhancedParamsArray: any[], ec?: LogExecutionContext): R | Promise<R> {
-    const log = new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'invoke');
+  private static invoke<R>(spec: ModuleResolutionInvocationSpecification<any>, enhancedParamsArray: any[], ec?: LogExecutionContext): Promise<R> {
+    const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invoke');
     if (spec.ownerIsObject === true && typeof spec._function !== 'string') {
       const err = new EnhancedError(`Invalid owner function ${spec._function} for ownerIsObject ${spec.ownerIsObject} - it should be a string (not a function)`);
-      logErrorAndThrow(err);
+      return Promise.reject(logErrorAndReturn(err, log));
     } else if (spec.ownerIsObject === false && typeof spec._function === 'string') {
       const err = new EnhancedError(`Invalid owner function ${spec._function} for ownerIsObject ${spec.ownerIsObject} - it should be a function (not a string)`);
-      logErrorAndThrow(err);
+      return Promise.reject(logErrorAndReturn(err, log));
     }
-    let actionResult: R | Promise<R>;
+    let actionResult: Promise<R>;
     try {
       if (spec.ownerIsObject === true) {
         actionResult = spec.objectRef[spec._function as string](...enhancedParamsArray);
       } else {
-        actionResult = (spec._function as ((...params) => R | Promise<R>))(...enhancedParamsArray);
+        actionResult = (spec._function as ((...params) => Promise<R>))(...enhancedParamsArray);
       }
-      spec.isAsync = isPromise(actionResult);
       return actionResult;
     } catch (err) {
-      logErrorAndThrow(err, log);
+      return Promise.reject(logErrorAndReturn(err, log));
     }
+  }
+
+  private static hasErrors(result: ModuleResolutionResult): boolean {
+    return result.loadingResult?.error !== undefined || result.setterResult?.error !== undefined || result.actionResult?.error !== undefined;
   }
 
   hasPendingResolution(refName: string): boolean {
@@ -222,7 +197,7 @@ export class ModuleResolver {
 
   add(pendingResolution: PendingModuleResolution, ec?: LogExecutionContext) {
     if (this.isResolving) {
-      logErrorAndThrow(new EnhancedError(`Cannot add while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'add'));
+      logErrorAndThrow(new EnhancedError(`Cannot add while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'module-resolver', 'index', 'add'));
     }
     if (!this.pendingResolutions) {
       this.pendingResolutions = [];
@@ -231,26 +206,11 @@ export class ModuleResolver {
     if (!pendingResolution.loader && !pendingResolution.action) {
       logErrorAndThrow(new EnhancedError(`At least one of either loader or action needs to be defined on PendingModuleResolution`));
     }
-    // Set _pendingAsync helper
-    // False is managed externally, set to false on creation, at the end of processing and on clear.
-    if(pendingResolution?.loader?.module?.moduleResolution === ModuleResolution.es) {
-      this._pendingAsync = true;
-    } else if (isLoadSchema(pendingResolution?.loader?.module?.loadSchema)) {
-      this._pendingAsync = pendingResolution.loader.module.loadSchema.validationSchema.$$async === true;
-    } else if(isAsyncCheckFunction(pendingResolution?.loader?.module?.loadSchema)) {
-      this._pendingAsync = true;
-    } else if(pendingResolution?.loader?.module?.asyncFactory) {
-      this._pendingAsync = true;
-    } else if(pendingResolution?.setter?.isAsync) {
-      this._pendingAsync = true;
-    } else if(pendingResolution?.action?.isAsync) {
-      this._pendingAsync = true;
-    }
     this.pendingResolutions.push(pendingResolution);
   }
 
-  resolve(ec?: LogExecutionContext): ModuleResolutionResult[] | Promise<ModuleResolutionResult[]> {
-    const log = new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'resolve');
+  resolve(ec?: LogExecutionContext): Promise<ModuleResolutionResult[]> {
+    const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'resolve');
     if (this.isResolving) {
       logErrorAndThrow(new EnhancedError(`Cannot launch resolve again while isResolving is ${this.isResolving}`), log);
     } else {
@@ -258,14 +218,14 @@ export class ModuleResolver {
     }
     if (!this.pendingResolutions || this.pendingResolutions.length === 0) {
       this.isResolving = false;
-      return [];
+      return Promise.resolve([]);
     }
     if (!this.moduleResolutionResults) {
       this.moduleResolutionResults = [];
     }
     // The resolver may be resolving incrementally.  Only work on pending resolutions that haven't yet been resolved.
     let pendingResolutions: PendingModuleResolution[];
-    let moduleResolutionResultPromises: (ModuleResolutionResult | Promise<ModuleResolutionResult>)[] = [];
+    let moduleResolutionResultPromises: Promise<ModuleResolutionResult>[] = [];
     let incremental = false;
     if (this.moduleResolutionResults.length > 0 && this.pendingResolutions.length > this.moduleResolutionResults.length) {
       pendingResolutions = this.pendingResolutions.slice(this.moduleResolutionResults.length - 1);
@@ -273,21 +233,17 @@ export class ModuleResolver {
     } else {
       pendingResolutions = this.pendingResolutions;
     }
-
-
-    let async = false;
     pendingResolutions.forEach(pendingResolution => {
-      let loadFunction: (ModuleDefinition, LogExecutionContext) => any | Promise<any>;
+      let loadFunction: <T>(ModuleDefinition, LogExecutionContext) => Promise<T>;
       if (pendingResolution?.loader !== undefined) {
-        if (pendingResolution?.loader.module.moduleResolution === ModuleResolution.json) {
+        if (pendingResolution?.loader.module.moduleName?.toLowerCase().endsWith('json')) {
           loadFunction = loadJSONResource;
         } else {
-          loadFunction = pendingResolution.loader.loadPackageType === LoadPackageType.json ? loadJSONFromPackage : loadFromModule;
+          loadFunction = pendingResolution.loader.loadPackageType === LoadPackageType.json ? loadJSONFromModule : loadFromModule;
         }
         try {
-          const loadResult = loadFunction(pendingResolution.loader.module, ec);
-          if (isPromise(loadResult)) {
-            async = true;
+          const loadResult = loadFunction<any>(pendingResolution.loader.module, ec);
+          if (loadResult) {
             const moduleResolutionPromise = loadResult
               .then(obj => {
                 const result: ModuleResolutionResult = {
@@ -298,14 +254,10 @@ export class ModuleResolver {
                   }
                 };
                 const setterResult = ModuleResolver.invokeSetter(result, ec);
-                if (isPromise(setterResult)) {
-                  return setterResult
-                    .then(trueVal => {
-                      return result;
-                    });
-                } else {
-                  return result;
-                }
+                return setterResult
+                  .then(trueVal => {
+                    return result;
+                  });
               }, err => {
                 log.warn(pendingResolution, `Pending resolution could not be successfully resolved`);
                 logErrorAndReturn(err, log);
@@ -319,68 +271,46 @@ export class ModuleResolver {
               });
             moduleResolutionResultPromises.push(moduleResolutionPromise);
           } else {
+            // No result
             const result: ModuleResolutionResult | Promise<ModuleResolutionResult> = {
               resolution: pendingResolution,
               loadingResult: {
                 resolved: true,
-                resolvedObject: loadResult
+                resolvedObject: undefined
               }
             };
             const setterResult = ModuleResolver.invokeSetter(result, ec);
-            let resultOrPromise: (ModuleResolutionResult | Promise<ModuleResolutionResult>);
-            if (isPromise(setterResult)) {
-              async = true;
-              const resultOrPromise: (ModuleResolutionResult | Promise<ModuleResolutionResult>) = setterResult
-                .then(trueVal => {
-                  result.setterResult = {
-                    resolved: true
-                  };
-                  return result;
-                });
-              moduleResolutionResultPromises.push(resultOrPromise);
-            } else {
-              result.setterResult = {
-                resolved: true
-              };
-              moduleResolutionResultPromises.push(result);
-            }
+            const resultPromise = setterResult
+              .then(trueVal => {
+                result.setterResult = {
+                  resolved: true
+                };
+                return result;
+              });
+            moduleResolutionResultPromises.push(resultPromise);
           }
         } catch (err) {
           log.warn(pendingResolution, `Pending resolution could not be successfully resolved`);
           logErrorAndReturn(err, log);
-          moduleResolutionResultPromises.push({
+          moduleResolutionResultPromises.push(Promise.resolve({
             resolution: pendingResolution,
             loadingResult: {
               resolved: false,
               error: err
             }
-          });
+          }));
         }
-      } else if(pendingResolution.action !== undefined) {
+      } else if (pendingResolution.action !== undefined) {
         // If there was no loader, no result has been created yet.  Therefore we need to create a result to house the actions
-        moduleResolutionResultPromises.push({
-          resolution: pendingResolution
-        })
+        moduleResolutionResultPromises.push(Promise.resolve({resolution: pendingResolution}));
       }
     });
-    if (async) {
-      if (moduleResolutionResultPromises.length > 0) {
-        return Promise.all(moduleResolutionResultPromises)
-          .then(moduleResolutionResults => {
-            const actionResultOrPromise = this.invokeActions(moduleResolutionResults, ec);
-            if (isPromise(actionResultOrPromise)) {
-              return actionResultOrPromise
-                .then((trueVal: true) => {
-                  if (incremental) {
-                    this.moduleResolutionResults = this.moduleResolutionResults.concat(moduleResolutionResults);
-                  } else {
-                    this.moduleResolutionResults = moduleResolutionResults;
-                  }
-                  this.isResolving = false;
-                  this._pendingAsync = false;
-                  return moduleResolutionResults;
-                });
-            } else {
+    if (moduleResolutionResultPromises.length > 0) {
+      return Promise.all(moduleResolutionResultPromises)
+        .then(moduleResolutionResults => {
+          const actionResultOrPromise = this.invokeActions(moduleResolutionResults, ec);
+          return actionResultOrPromise
+            .then((trueVal: true) => {
               if (incremental) {
                 this.moduleResolutionResults = this.moduleResolutionResults.concat(moduleResolutionResults);
               } else {
@@ -388,64 +318,34 @@ export class ModuleResolver {
               }
               this.isResolving = false;
               return moduleResolutionResults;
-            }
-          }, err => {
-            this.isResolving = false;
-            throw logErrorAndReturn(err);
-          });
-      } else {
-        this.isResolving = false;
-        this._pendingAsync = false;
-        return Promise.resolve([]);
-      }
+            });
+        }, err => {
+          this.isResolving = false;
+          return Promise.reject(logErrorAndReturn(err));
+        });
     } else {
-      const actionResultOrPromise = this.invokeActions(moduleResolutionResultPromises as ModuleResolutionResult[], ec);
-      if (isPromise(actionResultOrPromise)) {
-        return actionResultOrPromise
-          .then((trueVal: true) => {
-            if (incremental) {
-              this.moduleResolutionResults = this.moduleResolutionResults.concat(moduleResolutionResultPromises as ModuleResolutionResult[]);
-            } else {
-              this.moduleResolutionResults = moduleResolutionResultPromises as ModuleResolutionResult[];
-            }
-            this.isResolving = false;
-            this._pendingAsync = false;
-            return Promise.all(moduleResolutionResultPromises);
-          });
-      } else {
-        if (incremental) {
-          this.moduleResolutionResults = this.moduleResolutionResults.concat(moduleResolutionResultPromises as ModuleResolutionResult[]);
-        } else {
-          this.moduleResolutionResults = moduleResolutionResultPromises as ModuleResolutionResult[];
-        }
-        this.isResolving = false;
-        this._pendingAsync = false;
-        return moduleResolutionResultPromises as ModuleResolutionResult[];
-      }
+      this.isResolving = false;
+      return Promise.resolve([]);
     }
   }
 
+
   clear(ec?: LogExecutionContext) {
     if (this.isResolving) {
-      logErrorAndThrow(new EnhancedError(`Cannot clear while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'add'));
+      logErrorAndThrow(new EnhancedError(`Cannot clear while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'module-resolver', 'index', 'add'));
     }
     this.pendingResolutions = [];
     this.moduleResolutionResults = [];
-    this._pendingAsync = false;
   }
 
   hasResolutionErrors(): boolean {
     return this.moduleResolutionResults.some(moduleResolutionResult => moduleResolutionResult.loadingResult?.error || moduleResolutionResult.setterResult?.error || moduleResolutionResult.actionResult?.error);
   }
 
-  private static hasErrors(result: ModuleResolutionResult): boolean {
-    return result.loadingResult?.error !== undefined || result.setterResult?.error !== undefined || result.actionResult?.error !== undefined;
-  }
-
-  private invokeActions(moduleResolutionResults: (ModuleResolutionResult)[], ec?: LogExecutionContext): true | Promise<true> {
-    const log = new LoggerAdapter(ec, 'app-utility', 'module-resolver', 'invokeActions');
+  private invokeActions(moduleResolutionResults: (ModuleResolutionResult)[], ec?: LogExecutionContext): Promise<true> {
+    const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invokeActions');
     if (moduleResolutionResults.length === 0) {
-      return true;
+      Promise.resolve(true);
     }
     // Keep track of same actions and only invoke unique actions, including those that have errors
     const dedupSet: Set<string> = new Set<string>();
@@ -454,7 +354,7 @@ export class ModuleResolver {
     let actionableModuleResolutionResults: ModuleResolutionResult[] = moduleResolutionResults.filter(moduleResolutionResult => moduleResolutionResult.resolution?.action !== undefined);
     // Remove any that have errors associated with them, but remember that those actions were associated with errors
     actionableModuleResolutionResults = actionableModuleResolutionResults.filter(actionableModuleResolutionResult => {
-      if(ModuleResolver.hasErrors(actionableModuleResolutionResult)) {
+      if (ModuleResolver.hasErrors(actionableModuleResolutionResult)) {
         dedupSet.add(actionableModuleResolutionResult.resolution.action.dedupId);
         return false;
       } else {
@@ -463,7 +363,7 @@ export class ModuleResolver {
     });
     // Remove duplicates noting that we have to check against errors as well.
     actionableModuleResolutionResults = actionableModuleResolutionResults.filter(actionableModuleResolutionResult => {
-      if(dedupSet.has(actionableModuleResolutionResult.resolution.action.dedupId)) {
+      if (dedupSet.has(actionableModuleResolutionResult.resolution.action.dedupId)) {
         return false;
       } else {
         dedupSet.add(actionableModuleResolutionResult.resolution.action.dedupId);
@@ -471,12 +371,11 @@ export class ModuleResolver {
       }
     });
     if (actionableModuleResolutionResults.length === 0) {
-      return true;
+      return Promise.resolve(true);
     }
     const overallSuccess = actionableModuleResolutionResults.length === moduleResolutionResults.length;
-    let actionResult: true | Promise<true>;
-    let async = false;
-    const actionResultsOrPromises: (true | Promise<true>)[] = [];
+    let actionResult: Promise<true>;
+    const actionResultsOrPromises: (Promise<true>)[] = [];
     actionableModuleResolutionResults.forEach(result => {
       try {
         let paramsArray: any[];
@@ -495,38 +394,26 @@ export class ModuleResolver {
         };
         return;
       }
-      if (isPromise(actionResult)) {
-        async = true;
-        let promise: Promise<true> = actionResult
-          .then(() => {
-            result.actionResult = {
-              resolved: true
-            };
-            return true;
-          }, err => {
-            log.warn(result, `Action could not be successfully invoked`);
-            logErrorAndReturn(err, log);
-            result.actionResult = {
-              resolved: false,
-              error: err
-            };
-            return true;
-          });
-        actionResultsOrPromises.push(promise);
-      } else {
-        result.actionResult = {
-          resolved: true
-        };
-        actionResultsOrPromises.push(true);
-      }
-    });
-    if (async) {
-      return Promise.all(actionResultsOrPromises)
-        .then(trueVal => {
+      let promise: Promise<true> = actionResult
+        .then(() => {
+          result.actionResult = {
+            resolved: true
+          };
+          return true;
+        }, err => {
+          log.warn(result, `Action could not be successfully invoked`);
+          logErrorAndReturn(err, log);
+          result.actionResult = {
+            resolved: false,
+            error: err
+          };
           return true;
         });
-    } else {
-      return true;
-    }
+      actionResultsOrPromises.push(promise);
+    });
+    return Promise.all(actionResultsOrPromises)
+      .then(trueVal => {
+        return true;
+      });
   }
 }
