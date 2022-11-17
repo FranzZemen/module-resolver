@@ -7,9 +7,10 @@ import {LogExecutionContext, LoggerAdapter} from '@franzzemen/logger-adapter';
 import {loadFromModule, loadJSONFromModule, loadJSONResource, ModuleDefinition} from '@franzzemen/module-factory';
 
 
-export enum LoadPackageType {
-  json = 'json',
-  package = 'object'
+export enum FactoryType {
+  jsonFile = 'jsonFile',
+  jsonFactoryAttribute = 'jsonFactoryAttribute',
+  moduleFactoryFunction = 'moduleFactoryFunction',
 }
 
 // If an error is encountered, it is expected that Promise.reject will be returned.
@@ -65,7 +66,7 @@ export interface ModuleResolutionLoader {
    * If loading json from a module property, use module.moduleResolution as es or commonjs and loadPackageType as json
    * If loading a factory pattern, use module.moduleResolution as es or commonjs and loadPackageType as object
    */
-  loadPackageType?: LoadPackageType;
+  loadPackageType?: FactoryType;
 }
 
 export interface PendingModuleResolution {
@@ -236,10 +237,12 @@ export class ModuleResolver {
     pendingResolutions.forEach(pendingResolution => {
       let loadFunction: <T>(ModuleDefinition, LogExecutionContext) => Promise<T>;
       if (pendingResolution?.loader !== undefined) {
-        if (pendingResolution?.loader.module.moduleName?.toLowerCase().endsWith('json')) {
-          loadFunction = loadJSONResource;
+        if(pendingResolution.loader.loadPackageType === FactoryType.jsonFile) {
+          loadFunction = loadJSONResource
+        } else if (pendingResolution.loader.loadPackageType === FactoryType.jsonFactoryAttribute) {
+          loadFunction =loadJSONFromModule
         } else {
-          loadFunction = pendingResolution.loader.loadPackageType === LoadPackageType.json ? loadJSONFromModule : loadFromModule;
+          loadFunction = loadFromModule;
         }
         try {
           const loadResult = loadFunction<any>(pendingResolution.loader.module, ec);

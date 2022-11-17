@@ -1,7 +1,6 @@
 import {CheckFunction} from '@franzzemen/execution-context';
-import type {ModuleResolver as Resolver} from '../publish';
 import {
-  LoadPackageType,
+  FactoryType,
   ModuleResolutionActionInvocation,
   ModuleResolutionSetterInvocation,
   ModuleResolver,
@@ -11,8 +10,7 @@ import {
 import chai from 'chai';
 import Validator, {ValidationError, ValidationSchema} from 'fastest-validator';
 import 'mocha';
-import {isPromise} from 'util/types';
-import type {ModuleResolutionResult} from '../publish';
+import type {ModuleResolutionResult, ModuleResolver as Resolver} from '../publish';
 import {MyObject} from './my-object.js';
 
 
@@ -46,7 +44,7 @@ describe('@franzzemen/module-resolver', () => {
               module: {
                 moduleName: './testing-mjs/test-json.json'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -91,7 +89,7 @@ describe('@franzzemen/module-resolver', () => {
                   useNewCheckerFunction: false
                 }
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -139,7 +137,7 @@ describe('@franzzemen/module-resolver', () => {
                   useNewCheckerFunction: false
                 }
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -191,7 +189,7 @@ describe('@franzzemen/module-resolver', () => {
                   useNewCheckerFunction: true
                 }
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -253,7 +251,7 @@ describe('@franzzemen/module-resolver', () => {
                   useNewCheckerFunction: true
                 }
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -306,7 +304,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: './testing-mjs/test-json.json',
                 loadSchema
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -350,7 +348,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: '@franzzemen/test',
                 propertyName: 'nestedJsonStr.jsonStr'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFactoryAttribute
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -395,7 +393,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: '@franzzemen/test',
                 propertyName: 'nestedJsonStr.jsonStr'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFactoryAttribute
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -434,7 +432,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: '@franzzemen/test',
                 propertyName: 'nestedJsonStr.jsonStr'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFactoryAttribute
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -475,7 +473,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: '@franzzemen/test',
                 propertyName: 'nestedJsonStr.jsonStr'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFactoryAttribute
             }
           };
           const resolver: Resolver = new ModuleResolver();
@@ -524,7 +522,7 @@ describe('@franzzemen/module-resolver', () => {
                     useNewCheckerFunction: true
                   }
                 },
-                loadPackageType: LoadPackageType.package
+                loadPackageType: FactoryType.moduleFactoryFunction
               }
             };
             const resolver: Resolver = new ModuleResolver();
@@ -562,7 +560,7 @@ describe('@franzzemen/module-resolver', () => {
                             functionName: 'createAsyncFunc',
                             asyncFactory: true
                           },
-                          loadPackageType: LoadPackageType.package
+                          loadPackageType: FactoryType.package
                         }
                       };
                       const resolver: Resolver = new ModuleResolver();
@@ -605,7 +603,7 @@ describe('@franzzemen/module-resolver', () => {
               module: {
                 moduleName: './testing-mjs/test-json.json'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             },
             action: {
               dedupId: 'actionTest',
@@ -656,7 +654,7 @@ describe('@franzzemen/module-resolver', () => {
               module: {
                 moduleName: './testing-mjs/test-json.json'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             },
             action: {
               dedupId: 'actionTest',
@@ -710,7 +708,7 @@ describe('@franzzemen/module-resolver', () => {
               module: {
                 moduleName: './testing-mjs/test-json.json'
               },
-              loadPackageType: LoadPackageType.json
+              loadPackageType: FactoryType.jsonFile
             },
             action: {
               dedupId: 'actionTest',
@@ -778,7 +776,7 @@ describe('@franzzemen/module-resolver', () => {
                 moduleName: './testing-mjs/my-object.js',
                 functionName: 'myObjectFactory'
               },
-              loadPackageType: LoadPackageType.package
+              loadPackageType: FactoryType.moduleFactoryFunction
             },
             setter: {
               ownerIsObject: false,
