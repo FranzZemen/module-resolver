@@ -61,12 +61,8 @@ export interface ModuleResolutionLoader {
    * Module to be loaded and eventually resolved
    */
   module: ModuleDefinition;
-  /**
-   * If loading a json from file, use module.moduleResolution = ModuleResolution.json and loadPackageType to LoadPackageType.json
-   * If loading json from a module property, use module.moduleResolution as es or commonjs and loadPackageType as json
-   * If loading a factory pattern, use module.moduleResolution as es or commonjs and loadPackageType as object
-   */
-  loadPackageType?: FactoryType;
+
+  factoryType?: FactoryType;
 }
 
 export interface PendingModuleResolution {
@@ -237,9 +233,9 @@ export class ModuleResolver {
     pendingResolutions.forEach(pendingResolution => {
       let loadFunction: <T>(ModuleDefinition, LogExecutionContext) => Promise<T>;
       if (pendingResolution?.loader !== undefined) {
-        if(pendingResolution.loader.loadPackageType === FactoryType.jsonFile) {
+        if(pendingResolution.loader.factoryType === FactoryType.jsonFile) {
           loadFunction = loadJSONResource
-        } else if (pendingResolution.loader.loadPackageType === FactoryType.jsonFactoryAttribute) {
+        } else if (pendingResolution.loader.factoryType === FactoryType.jsonFactoryAttribute) {
           loadFunction =loadJSONFromModule
         } else {
           loadFunction = loadFromModule;
