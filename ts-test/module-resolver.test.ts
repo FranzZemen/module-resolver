@@ -4,13 +4,12 @@ import {
   ModuleResolutionActionInvocation,
   ModuleResolutionSetterInvocation,
   ModuleResolver,
+  ModuleResolutionResult,
   PendingModuleResolution
-  // @ts-ignore
-} from '@franzzemen/module-resolver';
+} from '../publish/mjs/index.js';
 import chai from 'chai';
 import Validator, {ValidationError, ValidationSchema} from 'fastest-validator';
 import 'mocha';
-import type {ModuleResolutionResult, ModuleResolver as Resolver} from '../publish';
 import {MyObject} from './my-object.js';
 
 
@@ -47,7 +46,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
 
@@ -92,7 +91,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -140,7 +139,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -192,7 +191,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -254,7 +253,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -307,7 +306,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFile
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -351,7 +350,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFactoryAttribute
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -396,7 +395,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFactoryAttribute
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -435,7 +434,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFactoryAttribute
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -476,7 +475,7 @@ describe('@franzzemen/module-resolver', () => {
               factoryType: FactoryType.jsonFactoryAttribute
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -525,7 +524,7 @@ describe('@franzzemen/module-resolver', () => {
                 factoryType: FactoryType.moduleFactoryFunction
               }
             };
-            const resolver: Resolver = new ModuleResolver();
+            const resolver: ModuleResolver = new ModuleResolver();
             resolver.add(pendingResolution);
             const resultPromise = resolver.resolve();
             return resultPromise
@@ -563,7 +562,7 @@ describe('@franzzemen/module-resolver', () => {
                           factoryType: FactoryType.package
                         }
                       };
-                      const resolver: Resolver = new ModuleResolver();
+                      const resolver: ModuleResolver = new ModuleResolver();
                       resolver.add(pendingResolution);
                       const resultPromise = resolver.resolve();
                       return resultPromise.then((values: ModuleResolutionResult[]) => {
@@ -612,7 +611,7 @@ describe('@franzzemen/module-resolver', () => {
               ownerIsObject: false
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
@@ -663,7 +662,7 @@ describe('@franzzemen/module-resolver', () => {
               ownerIsObject: false
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
@@ -726,7 +725,7 @@ describe('@franzzemen/module-resolver', () => {
               ownerIsObject: false
             }
           };
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           resolver.add(pendingResolution);
           resolver.add(pendingResolution2);
@@ -791,7 +790,7 @@ describe('@franzzemen/module-resolver', () => {
             }
           };
 
-          const resolver: Resolver = new ModuleResolver();
+          const resolver: ModuleResolver = new ModuleResolver();
           resolver.add(pendingResolution);
           const resultPromise = resolver.resolve();
           return resultPromise
