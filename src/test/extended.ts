@@ -2,7 +2,7 @@
 
 export class TestDataType {
   name: string = 'Test'
-  eval (): number {
+  eval (): number | undefined {
     return undefined;
   }
 }

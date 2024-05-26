@@ -1,12 +1,6 @@
-.idea
-.aws-sam
-*~
+out
 node_modules
-*.zip
-release
-build*
-layer-release
-publish
-testing
-testing-mjs
-testing-cjs
+project-init-undo.txt
+config.json
+config.json.decrypt
+.idea

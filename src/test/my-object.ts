@@ -1,7 +1,7 @@
 export class MyObject {
   constructor() {
   }
-  name: string;
+  name: string | undefined
 }
 
 export function myObjectFactory(name: string): Promise<MyObject> {

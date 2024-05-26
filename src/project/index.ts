@@ -14,7 +14,7 @@ export enum FactoryType {
 }
 
 // If an error is encountered, it is expected that Promise.reject will be returned.
-export type ModuleResolutionSetterInvocation = ((refName: string, result: any, def?: ModuleResolutionResult, ...params) => Promise<true>);
+export type ModuleResolutionSetterInvocation = ((refName: string, result: any, def?: ModuleResolutionResult, ...params: any[]) => Promise<true>);
 /**
  * Invoked once the resolver has resolved ALL module loads and setters
  * Only called if the any associated module load and any setter was successful for all identical dedup ids.
@@ -23,7 +23,7 @@ export type ModuleResolutionSetterInvocation = ((refName: string, result: any, d
  *
  * If error an Error is expected or a Promise that resolves to one (Promise.reject)
  */
-export type ModuleResolutionActionInvocation = (successfulResolution: boolean, ...params) => Promise<true>;
+export type ModuleResolutionActionInvocation = (successfulResolution: boolean, ...params: any[]) => Promise<true>;
 
 
 export interface ModuleResolutionInvocationSpecification<I> {
@@ -123,6 +123,9 @@ export class ModuleResolver {
     if (result.resolution?.setter) {
       try {
         let paramsArray: any[];
+        if(result.loadingResult === undefined) {
+          throw new EnhancedError(`Loading result is undefined for resolution ${result.resolution.refName}`);
+        }
         if (result.resolution.setter.paramsArray) {
           paramsArray = [result.resolution.refName, result.loadingResult.resolvedObject, result, ...result.resolution.setter.paramsArray];
         } else {
@@ -146,15 +149,15 @@ export class ModuleResolver {
           });
       } catch (err) {
         log.warn(result, `Setter could not be successfully invoked`);
-        const enhancedError = logErrorAndReturn(err, log);
+        const enhancedError = logErrorAndReturn(err as Error, log);
         result.setterResult = {
           resolved: false,
           error: enhancedError
         };
-        Promise.reject(enhancedError);
+        return Promise.reject(enhancedError);
       }
     } else {
-      Promise.resolve(true);
+      return Promise.resolve(true);
     }
   }
 
@@ -172,11 +175,11 @@ export class ModuleResolver {
       if (spec.ownerIsObject === true) {
         actionResult = spec.objectRef[spec._function as string](...enhancedParamsArray);
       } else {
-        actionResult = (spec._function as ((...params) => Promise<R>))(...enhancedParamsArray);
+        actionResult = (spec._function as ((...params: any[]) => Promise<R>))(...enhancedParamsArray);
       }
       return actionResult;
     } catch (err) {
-      return Promise.reject(logErrorAndReturn(err, log));
+      return Promise.reject(logErrorAndReturn(err as Error, log));
     }
   }
 
@@ -231,13 +234,16 @@ export class ModuleResolver {
       pendingResolutions = this.pendingResolutions;
     }
     pendingResolutions.forEach(pendingResolution => {
-      let loadFunction: <T>(ModuleDefinition, LogExecutionContext) => Promise<T>;
+      let loadFunction: <T>(ModuleDefinition: ModuleDefinition, LogExecutionContext: LogExecutionContext | undefined) => Promise<T>;
       if (pendingResolution?.loader !== undefined) {
         if(pendingResolution.loader.factoryType === FactoryType.jsonFile) {
+          // @ts-ignore
           loadFunction = loadJSONResource
         } else if (pendingResolution.loader.factoryType === FactoryType.jsonFactoryAttribute) {
+          // @ts-ignore
           loadFunction =loadJSONFromModule
         } else {
+          // @ts-ignore
           loadFunction = loadFromModule;
         }
         try {
@@ -290,12 +296,12 @@ export class ModuleResolver {
           }
         } catch (err) {
           log.warn(pendingResolution, `Pending resolution could not be successfully resolved`);
-          logErrorAndReturn(err, log);
+          logErrorAndReturn(err as Error, log);
           moduleResolutionResultPromises.push(Promise.resolve({
             resolution: pendingResolution,
             loadingResult: {
               resolved: false,
-              error: err
+              error: err as Error
             }
           }));
         }
@@ -354,6 +360,9 @@ export class ModuleResolver {
     // Remove any that have errors associated with them, but remember that those actions were associated with errors
     actionableModuleResolutionResults = actionableModuleResolutionResults.filter(actionableModuleResolutionResult => {
       if (ModuleResolver.hasErrors(actionableModuleResolutionResult)) {
+        if(actionableModuleResolutionResult.resolution.action === undefined || actionableModuleResolutionResult.resolution.action.dedupId === undefined) {
+          throw new EnhancedError(`Actionable resolution has errors but no dedupId`);
+        }
         dedupSet.add(actionableModuleResolutionResult.resolution.action.dedupId);
         return false;
       } else {
@@ -362,6 +371,9 @@ export class ModuleResolver {
     });
     // Remove duplicates noting that we have to check against errors as well.
     actionableModuleResolutionResults = actionableModuleResolutionResults.filter(actionableModuleResolutionResult => {
+      if(actionableModuleResolutionResult.resolution.action === undefined || actionableModuleResolutionResult.resolution.action.dedupId === undefined) {
+        throw new EnhancedError(`Actionable resolution has errors but no dedupId`);
+      }
       if (dedupSet.has(actionableModuleResolutionResult.resolution.action.dedupId)) {
         return false;
       } else {
@@ -378,6 +390,9 @@ export class ModuleResolver {
     actionableModuleResolutionResults.forEach(result => {
       try {
         let paramsArray: any[];
+        if(result.resolution.action === undefined) {
+          throw new EnhancedError(`Actionable resolution has no action`);
+        }
         if (result.resolution.action.paramsArray) {
           paramsArray = [overallSuccess, ...result.resolution.action.paramsArray];
         } else {
@@ -386,10 +401,10 @@ export class ModuleResolver {
         actionResult = ModuleResolver.invoke<true>(result.resolution.action, paramsArray, ec);
       } catch (err) {
         log.warn(result, `Action could not be successfully invoked`);
-        logErrorAndReturn(err, log);
+        logErrorAndReturn(err as Error, log);
         result.actionResult = {
           resolved: false,
-          error: err
+          error: err as Error
         };
         return;
       }
