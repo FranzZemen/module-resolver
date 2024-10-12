@@ -1,6 +1,6 @@
 {
   "name": "@franzzemen/module-resolver",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Keeps track of promises for later resolution, allowing promises to remain synchronous if the results are not immediately needed.",
   "type": "module",
   "exports": {
