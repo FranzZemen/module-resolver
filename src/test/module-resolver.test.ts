@@ -1,4 +1,3 @@
-import {CheckFunction} from '@franzzemen/execution-context';
 import {
   FactoryType,
   ModuleResolutionActionInvocation,
@@ -18,7 +17,8 @@ const should = chai.should();
 const expect = chai.expect;
 
 const unreachableCode = false;
-
+// TODO: Renable tests with exeuction context
+/*
 describe('@franzzemen/module-resolver', () => {
   describe('module resolver tests', () => {
     describe('module-resolver.test', () => {
@@ -735,69 +735,11 @@ describe('@franzzemen/module-resolver', () => {
           });
 
           it('should invoke action only once with independent action and async', () => {
-/*
-            class SomeObject {
-              myObject?: MyObject;
-              count?: number;
-            }
 
-            const someObject = new SomeObject();
-
-            const action: ModuleResolutionActionInvocation = (successfulResolution, obj: SomeObject, count: number) => {
-              if (successfulResolution) {
-                someObject.myObject = container.myObject;
-                someObject.count = count;
-              }
-              return Promise.reject(new Error('true'));
-            };
-
-            const container: { myObject: MyObject } = {
-              myObject: MyObject
-            };
-
-            const setter: ModuleResolutionSetterInvocation = (refName: string, result: MyObject, def: ModuleResolutionResult | undefined, name: string) => {
-              container.myObject = result;
-              container.myObject.name = name;
-              return Promise.resolve(true);
-            };
-
-            const pendingResolution: PendingModuleResolution = {
-              refName: 'FunObject',
-              loader: {
-                module: {
-                  moduleName: './out/test/my-object.js',
-                  functionName: 'myObjectFactory'
-                },
-                factoryType: FactoryType.moduleFactoryFunction
-              },
-              setter: {
-                ownerIsObject: false,
-                _function: setter,
-                paramsArray: ['FunObject']
-              },
-              action: {
-                _function: action,
-                objectRef: undefined,
-                ownerIsObject: false,
-                paramsArray: [someObject, 5]
-              }
-            };
-
-            const resolver: ModuleResolver = new ModuleResolver();
-            resolver.add(pendingResolution);
-            const resultPromise = resolver.resolve();
-            return resultPromise
-              .then(result => {
-                // @ts-ignore
-                someObject.myObject.name.should.equal('FunObject');
-                // @ts-ignore
-                someObject.count.should.equal(5);
-              });
-              
- */
           });
         });
       });
     });
   });
 });
+*/

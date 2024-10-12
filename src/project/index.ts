@@ -3,8 +3,9 @@ Created by Franz Zemen 11/05/2022
 License Type: MIT
 */
 import {EnhancedError, logErrorAndReturn, logErrorAndThrow} from '@franzzemen/enhanced-error';
-import {LogExecutionContext, LoggerAdapter} from '@franzzemen/logger-adapter';
+import {LoggerAdapter} from '@franzzemen/logger-adapter';
 import {loadFromModule, loadJSONFromModule, loadJSONResource, ModuleDefinition} from '@franzzemen/module-factory';
+import {ExecutionContext} from '@franzzemen/execution-context';
 
 
 export enum FactoryType {
@@ -117,7 +118,7 @@ export class ModuleResolver {
     return results.some(result => result.loadingResult?.error || result.setterResult?.error || result.actionResult?.error);
   }
 
-  private static invokeSetter(result: ModuleResolutionResult, ec?: LogExecutionContext): Promise<true> {
+  private static invokeSetter(result: ModuleResolutionResult, ec: ExecutionContext): Promise<true> {
     const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invokeSetter');
     let setterResult: Promise<true>;
     if (result.resolution?.setter) {
@@ -161,7 +162,7 @@ export class ModuleResolver {
     }
   }
 
-  private static invoke<R>(spec: ModuleResolutionInvocationSpecification<any>, enhancedParamsArray: any[], ec?: LogExecutionContext): Promise<R> {
+  private static invoke<R>(spec: ModuleResolutionInvocationSpecification<any>, enhancedParamsArray: any[], ec: ExecutionContext): Promise<R> {
     const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invoke');
     if (spec.ownerIsObject === true && typeof spec._function !== 'string') {
       const err = new EnhancedError(`Invalid owner function ${spec._function} for ownerIsObject ${spec.ownerIsObject} - it should be a string (not a function)`);
@@ -195,7 +196,7 @@ export class ModuleResolver {
     return (this.isResolving === true || this.pendingResolutions.length != this.moduleResolutionResults.length);
   }
 
-  add(pendingResolution: PendingModuleResolution, ec?: LogExecutionContext) {
+  add(pendingResolution: PendingModuleResolution, ec: ExecutionContext) {
     if (this.isResolving) {
       logErrorAndThrow(new EnhancedError(`Cannot add while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'module-resolver', 'index', 'add'));
     }
@@ -204,12 +205,12 @@ export class ModuleResolver {
     }
     // At least one of loading or action needs to be defined.
     if (!pendingResolution.loader && !pendingResolution.action) {
-      logErrorAndThrow(new EnhancedError(`At least one of either loader or action needs to be defined on PendingModuleResolution`));
+      logErrorAndThrow(new EnhancedError(`At least one of either loader or action needs to be defined on PendingModuleResolution`), new LoggerAdapter(ec, 'module-resolver', 'index', 'add'));
     }
     this.pendingResolutions.push(pendingResolution);
   }
 
-  resolve(ec?: LogExecutionContext): Promise<ModuleResolutionResult[]> {
+  resolve(ec: ExecutionContext): Promise<ModuleResolutionResult[]> {
     const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'resolve');
     if (this.isResolving) {
       logErrorAndThrow(new EnhancedError(`Cannot launch resolve again while isResolving is ${this.isResolving}`), log);
@@ -234,7 +235,7 @@ export class ModuleResolver {
       pendingResolutions = this.pendingResolutions;
     }
     pendingResolutions.forEach(pendingResolution => {
-      let loadFunction: <T>(ModuleDefinition: ModuleDefinition, LogExecutionContext: LogExecutionContext | undefined) => Promise<T>;
+      let loadFunction: <T>(ModuleDefinition: ModuleDefinition, LogExecutionContext: ExecutionContext | undefined) => Promise<T>;
       if (pendingResolution?.loader !== undefined) {
         if(pendingResolution.loader.factoryType === FactoryType.jsonFile) {
           // @ts-ignore
@@ -326,7 +327,7 @@ export class ModuleResolver {
             });
         }, err => {
           this.isResolving = false;
-          return Promise.reject(logErrorAndReturn(err));
+          return Promise.reject(logErrorAndReturn(err, log));
         });
     } else {
       this.isResolving = false;
@@ -335,7 +336,7 @@ export class ModuleResolver {
   }
 
 
-  clear(ec?: LogExecutionContext) {
+  clear(ec: ExecutionContext) {
     if (this.isResolving) {
       logErrorAndThrow(new EnhancedError(`Cannot clear while isResolving is ${this.isResolving}`), new LoggerAdapter(ec, 'module-resolver', 'index', 'add'));
     }
@@ -347,7 +348,7 @@ export class ModuleResolver {
     return this.moduleResolutionResults.some(moduleResolutionResult => moduleResolutionResult.loadingResult?.error || moduleResolutionResult.setterResult?.error || moduleResolutionResult.actionResult?.error);
   }
 
-  private invokeActions(moduleResolutionResults: (ModuleResolutionResult)[], ec?: LogExecutionContext): Promise<true> {
+  private invokeActions(moduleResolutionResults: (ModuleResolutionResult)[], ec: ExecutionContext): Promise<true> {
     const log = new LoggerAdapter(ec, 'module-resolver', 'index', 'invokeActions');
     if (moduleResolutionResults.length === 0) {
       Promise.resolve(true);
